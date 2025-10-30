@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文本分割器 - 按数字编号分割并导入Flomo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: #3498db;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-section, .output-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .output-container {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #e67e22;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .segment {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .segment-number {
+            font-weight: bold;
+            color: #3498db;
+        }
+
+        .segment-content {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .segment-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .segment-btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            background: #ecf0f1;
+        }
+
+        .segment-btn:hover {
+            background: #d5dbdb;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #2ecc71;
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .flomo-config {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .config-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .api-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #3498db;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .api-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3);
+        }
+
+        .tag-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .progress-container {
+            margin-top: 10px;
+            height: 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #2ecc71;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .regex-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+
+        .regex-pattern {
+            font-family: monospace;
+            background: #f1f1f1;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>文本分割器 - 导入Flomo</h1>
+        <p class="description">按照数字编号分割文本，并将每条内容单独导入Flomo</p>
+    </header>
+
+    <div class="main-content">
+        <div class="input-section">
+            <h2 class="section-title">输入文本</h2>
+            <textarea id="input-text" placeholder="请输入要分割的长文本..."></textarea>
+
+            <div class="flomo-config">
+                <div class="config-title">Flomo 配置</div>
+                <input type="text" class="api-input" id="api-input" placeholder="请输入你的 Flomo API 地址">
+                <input type="text" class="tag-input" id="tag-input" placeholder="可选：添加标签，如 #文本分割">
+            </div>
+
+            <div class="regex-info">
+                使用的正则表达式: <span class="regex-pattern">/\b\d{1,3}\.\s*/g</span>
+                <br>匹配1-3位数字后跟点号和可能的空格
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="split-btn">分割文本</button>
+                <button class="btn btn-secondary" id="clear-btn">清空</button>
+                <button class="btn btn-warning" id="send-all-btn" disabled>全部发送到Flomo</button>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <h2 class="section-title">分割结果</h2>
+            <div class="output-container" id="output-container">
+                <!-- 分割结果将在这里显示 -->
+            </div>
+            <div class="stats">
+                <div class="stat-item">
+                    段落数量: <span class="stat-value" id="segment-count">0</span>
+                </div>
+                <div class="stat-item">
+                    总字符数: <span class="stat-value" id="total-chars">0</span>
+                </div>
+                <div class="stat-item">
+                    匹配模式: <span class="stat-value" id="pattern-count">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="notification" id="notification">内容已复制到剪贴板！</div>
+
+<script>
+    // 获取DOM元素
+    const inputText = document.getElementById('input-text');
+    const outputContainer = document.getElementById('output-container');
+    const splitBtn = document.getElementById('split-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const sendAllBtn = document.getElementById('send-all-btn');
+    const notification = document.getElementById('notification');
+    const segmentCount = document.getElementById('segment-count');
+    const totalChars = document.getElementById('total-chars');
+    const patternCount = document.getElementById('pattern-count');
+    const apiInput = document.getElementById('api-input');
+    const tagInput = document.getElementById('tag-input');
+    const progressBar = document.getElementById('progress-bar');
+
+    // 存储分割后的段落
+    let segments = [];
+
+    // 分割文本函数
+    function splitText() {
+        const text = inputText.value.trim();
+
+        if (!text) {
+            outputContainer.innerHTML = '<p style="color: #7f8c8d; text-align: center;">请输入要分割的文本</p>';
+            updateStats(0, 0, 0);
+            sendAllBtn.disabled = true;
+            return;
+        }
+
+        // 使用正则表达式匹配数字编号 (1-3位数字后跟点号)
+        const regex = /\b\d{1,3}\.\s*/g;
+        const textSegments = text.split(regex);
+        const matches = text.match(regex) || [];
+
+        // 清空输出容器
+        outputContainer.innerHTML = '';
+        segments = [];
+
+        // 如果没有匹配到数字编号，显示整个文本作为一个段落
+        if (matches.length === 0) {
+            const segment = {
+                header: '无编号段落',
+                content: text
+            };
+            segments.push(segment);
+
+            const segmentDiv = createSegmentElement(segment, 0);
+            outputContainer.appendChild(segmentDiv);
+        } else {
+            // 为每个段落创建元素
+            for (let i = 0; i < textSegments.length; i++) {
+                if (textSegments[i].trim() === '') continue;
+
+                let headerText = '无编号段落';
+                if (i > 0 && matches[i-1]) {
+                    headerText = matches[i-1].trim();
+                }
+
+                const segment = {
+                    header: headerText,
+                    content: textSegments[i].trim()
+                };
+                segments.push(segment);
+
+                const segmentDiv = createSegmentElement(segment, segments.length - 1);
+                outputContainer.appendChild(segmentDiv);
+            }
+        }
+
+        // 更新统计信息
+        updateStats(
+            segments.length,
+            text.length,
+            matches.length
+        );
+
+        // 启用发送按钮
+        sendAllBtn.disabled = segments.length === 0;
+    }
+
+    // 创建段落元素
+    function createSegmentElement(segment, index) {
+        const segmentDiv = document.createElement('div');
+        segmentDiv.className = 'segment';
+        segmentDiv.innerHTML = `
+                <div class="segment-header">
+                    <span class="segment-number">${segment.header}</span>
+                    <div class="segment-actions">
+                        <button class="segment-btn copy-btn" data-index="${index2}">复制</button>
+                        <button class="segment-btn send-btn" data-index="${index2}">发送到Flomo</button>
+                    </div>
+                </div>
+                <div class="segment-content">${segment.content}</div>
+            `;
+        return segmentDiv;
+    }
+
+    // 更新统计信息
+    function updateStats(segmentsCount, chars, patterns) {
+        segmentCount.textContent = segmentsCount;
+        totalChars.textContent = chars;
+        patternCount.textContent = patterns;
+    }
+
+    // 清空输入和输出
+    function clearAll() {
+        inputText.value = '';
+        outputContainer.innerHTML = '<p style="color: #7f8c8d; text-align: center;">分割结果将显示在这里</p>';
+        updateStats(0, 0, 0);
+        sendAllBtn.disabled = true;
+        progressBar.style.width = '0%';
+    }
+
+    // 发送单条内容到Flomo
+    async function sendToFlomo(content, tags = '') {
+        const apiUrl = apiInput.value.trim();
+
+        if (!apiUrl) {
+            showNotification('请先输入Flomo API地址', true);
+            return false;
+        }
+
+        const payload = {
+            content: content
+        };
+
+        if (tags) {
+            payload.tags = tags;
+        }
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('发送到Flomo时出错:', error);
+            throw error;
+        }
+    }
+
+    // 发送所有段落到Flomo
+    async function sendAllToFlomo() {
+        const apiUrl = apiInput.value.trim();
+        const tags = tagInput.value.trim();
+
+        if (!apiUrl) {
+            showNotification('请先输入Flomo API地址', true);
+            return;
+        }
+
+        if (segments.length === 0) {
+            showNotification('没有内容可发送', true);
+            return;
+        }
+
+        sendAllBtn.disabled = true;
+        sendAllBtn.textContent = '发送中...';
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < segments.length; i++) {
+            const segment = segments[i];
+            const content = `${segment.header}\n${segment.content}`;
+
+            try {
+                await sendToFlomo(content, tags);
+                successCount++;
+
+                // 更新进度条
+                const progress = ((i + 1) / segments.length) * 100;
+                progressBar.style.width = `${progress}%`;
+
+                // 短暂延迟，避免请求过于频繁
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                errorCount++;
+                console.error(`第 ${i + 1} 条内容发送失败:`, error);
+            }
+        }
+
+        sendAllBtn.disabled = false;
+        sendAllBtn.textContent = '全部发送到Flomo';
+
+        if (errorCount === 0) {
+            showNotification(`成功发送 ${successCount} 条内容到Flomo`);
+        } else {
+            showNotification(`成功发送 ${successCount} 条，失败 ${errorCount} 条`, true);
+        }
+    }
+
+    // 显示通知
+    function showNotification(message, isError = false) {
+        notification.textContent = message;
+        notification.className = 'notification';
+
+        if (isError) {
+            notification.classList.add('error');
+        }
+
+        notification.classList.add('show');
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+    }, 3000);
+    }
+
+    // 事件监听
+    splitBtn.addEventListener('click', splitText);
+    clearBtn.addEventListener('click', clearAll);
+    sendAllBtn.addEventListener('click', sendAllToFlomo);
+
+    // 事件委托处理段落的按钮点击
+    outputContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('copy-btn')) {
+            const index = parseInt(e.target.getAttribute('data-index'));
+            const segment = segments[index2];
+            const content = `${segment.header}\n${segment.content}`;
+
+            navigator.clipboard.writeText(content)
+                .then(() => {
+                showNotification('内容已复制到剪贴板');
+        })
+        .catch(err => {
+                console.error('复制失败: ', err);
+            showNotification('复制失败，请手动复制', true);
+        });
+        }
+
+        if (e.target.classList.contains('send-btn')) {
+            const index = parseInt(e.target.getAttribute('data-index'));
+            const segment = segments[index2];
+            const content = `${segment.header}\n${segment.content}`;
+            const tags = tagInput.value.trim();
+
+            sendToFlomo(content, tags)
+                .then(success => {
+                if (success) {
+                    showNotification('内容已发送到Flomo');
+                }
+            })
+        .catch(error => {
+                showNotification('发送失败: ' + error.message, true);
+        });
+        }
+    });
+
+    // 初始化
+    clearAll();
+
+    // 示例文本
+    const sampleText = `1. 这是第一个段落。包含一些示例文本，用于演示分割功能。
+        2. 这是第二个段落。请注意数字编号可以是1-3位数字后跟点号。
+        11. 这是第十一个段落。数字编号可以是11.这样的两位数。
+        222. 这是第二百二十二个段落。数字编号   ``最多可以是三位数，如222.。
+        3. 这是第三个段落。数字编号不需要连续，可以任意顺序。
+        15. 这是第十五个段落。分割器会识别所有符合模式的数字编号。`;
+
+    // 可选：加载示例文本
+    inputText.value = sampleText;
+</script>
+</body>
+</html>
